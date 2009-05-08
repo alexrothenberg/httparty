@@ -89,6 +89,34 @@ module HTTParty
         query_string_parts.size > 0 ? query_string_parts.join('&') : nil
       end
       
+      def stashed_set_cookies
+        @set_cookies ||= []
+      end
+      
+      def stash_new_set_cookies set_cookie_header_value
+        stashed_set_cookies.push(set_cookie_header_value).flatten! unless set_cookie_header_value.nil?
+      end
+      
+      def add_stashed_cookies_to_request
+        cookies_hash = CookieHash.new
+        stashed_set_cookies.each do |http_cookie|
+          name_value = http_cookie.split(';').first.split('=')
+          cookies_hash.add_cookies(name_value[0] => name_value[1])
+        end
+        options[:headers] ||= {}
+        options[:headers]["cookie"] = cookies_hash.to_cookie_string
+      end
+      
+      def aggregate_cookies_and_perform http_response
+        stash_new_set_cookies http_response.to_hash['set-cookie']
+        add_stashed_cookies_to_request
+        
+        response = perform
+        new_set_cookies = response.headers['set-cookie'] || []
+        response.headers['set-cookie'] = @set_cookies.concat(new_set_cookies) 
+        response
+      end
+      
       # Raises exception Net::XXX (http error code) if an http error occured
       def handle_response(response)
         case response
@@ -96,7 +124,7 @@ module HTTParty
             options[:limit] -= 1
             self.path = response['location']
             @redirect = true
-            perform
+            aggregate_cookies_and_perform(response)
           else
             parsed_response = parse_response(response.body)
             Response.new(parsed_response, response.body, response.code, response.message, response.to_hash)
