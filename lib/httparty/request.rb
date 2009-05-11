@@ -100,7 +100,7 @@ module HTTParty
       def add_stashed_cookies_to_request
         cookies_hash = CookieHash.new
         stashed_set_cookies.each do |http_cookie|
-          name_value = http_cookie.split(';').first.split('=')
+          name_value = http_cookie.split(';').first.split('=',2)
           cookies_hash.add_cookies(name_value[0] => name_value[1])
         end
         options[:headers] ||= {}

@@ -176,17 +176,17 @@ describe HTTParty::Request do
 
       describe "aggregates set-cookie headers" do
         before(:each) do
-          @redirect['set-cookie'] = 'session_id=12345; Path=/'
+          @redirect['set-cookie'] = 'session_id=12345==; Path=/'
           @ok['set-cookie'] = 'another_cookie=from_the_second_response=; Path=/'
         end
 
         it "should return concatenated list of set-cookie headers from all requests" do
-          @request.perform.headers['set-cookie'].should include('session_id=12345; Path=/', 'another_cookie=from_the_second_response=; Path=/')
+          @request.perform.headers['set-cookie'].should include('session_id=12345==; Path=/', 'another_cookie=from_the_second_response=; Path=/')
         end
 
         it "should pass cookies set by the first request on the redirect" do
           Net::HTTP::Get.stub!(:new).and_return(first_get=stub(:first_request).as_null_object, redirect_get=mock(:redirect_request))
-          redirect_get.should_receive(:initialize_http_header).with('cookie'=>'session_id=12345')
+          redirect_get.should_receive(:initialize_http_header).with('cookie'=>'session_id=12345==')
           @request.perform.should == {"hash" => {"foo" => "bar"}}
         end
       end
